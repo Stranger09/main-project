@@ -1,0 +1,248 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <style>
+        .playGround {
+            display: flex;
+            width: 680px;
+            flex-wrap: wrap-reverse;
+            justify-content: space-between;
+            margin: auto;
+        }
+
+        .sprite {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #levelStartTime {
+            position: absolute;
+            z-index: 1000;
+            top: 30%;
+            background-color: #58ff00;
+            width: 210px;
+            padding: 10px;
+            height: 70px;
+            align-items: baseline;
+            justify-content: space-around;
+            display: none;
+            margin-top: 200px;
+        }
+        .main-image {
+            box-shadow: rgb(9, 100, 235) 0px 0px 5px 5px;
+        }
+
+        .main-image-wrapper {
+            margin: auto;
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .card {
+            margin: 10px;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            border: 1px solid #cccccc;
+        }
+
+        .player-info-wrapper {
+            display: flex;
+            justify-content: space-around;
+            border: 1px solid #cccccc;
+            padding: 5px;
+        }
+
+        .card.stub {
+            display: flex;
+        }
+
+        .card.stub h1 {
+            margin: auto;
+        }
+        #levelFinishTime {
+            display: flex;
+        }
+    </style>
+
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <title>Getting Started: Serving Web Content</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+</head>
+<body>
+<div class="player-info-wrapper">
+    <div class="player-name">Hello, {{name}}</div>
+    <div class="player-score">Score:  {{score}}</div>
+    <div class="player-level">Level:  {{level}}</div>
+    <div class="player-lives">Lives:  {{lives}}</div>
+</div>
+
+
+<div class="sprite">
+    <div class="main-image-wrapper">
+        <span>Image need to be selected:</span>
+        <div class="card main-image"></div>
+        <button type="button" class="submit">Approve</button>
+        <div id="levelFinishTime">
+            <h2>level will finish in: </h2>
+            <h2 id="levelFinishTimeDisplay"></h2>
+        </div>
+        <div id="levelStartTime">
+            <h2>level will start in: </h2>
+            <h2 id="levelStartTimeDisplay"></h2>
+        </div>
+    </div>
+
+    <div class="playGround"></div>
+</div>
+
+
+</body>
+<script type="text/javascript">
+    jQuery(document).ready(function () {
+        getCards();
+    });
+
+    function runLevel(data) {
+        var startLevelSeconds = data[0].timeBeforeShowImages;
+        var timerWrapper = jQuery("#levelStartTime");
+        timerWrapper.css("display", "flex");
+        var timer = setInterval(function () {
+            document.getElementById('levelStartTimeDisplay').innerHTML = startLevelSeconds;
+            startLevelSeconds--;
+            if (startLevelSeconds < 0) {
+                timerWrapper.css("display", "none");
+                clearInterval(timer);
+                showCards(data);
+                var showImagesTime =  data[0].showImagesTime;
+                var showImagesTimer = setInterval(function () {
+                    showImagesTime--;
+                    if (showImagesTime < 0) {
+                        clearInterval(showImagesTimer);
+                        hideImages(data);
+                    }
+                }, 1000);
+            }
+        }, 1000);
+    }
+
+    function hideImages(data) {
+        renderBase(true, data);
+        startLevelTime(data);
+    }
+
+    function startLevelTime(data) {
+        var finishLevelSeconds =  data[0].timeForMakeChoice;
+        var selectedItems = {};
+        var levelTimer = setInterval(function () {
+            document.getElementById('levelFinishTimeDisplay').innerHTML = " " + finishLevelSeconds;
+            finishLevelSeconds--;
+            if (finishLevelSeconds < 0) {
+                clearInterval(levelTimer);
+                alert("you lose");
+                window.location.replace("/");
+            }
+        }, 1000);
+
+        jQuery(document).on("click", ".selectable", function (e) {
+            var currentElement = jQuery(this);
+            var elementId = currentElement.attr("id");
+            var imageName = currentElement.attr("name");
+            if (!(elementId in selectedItems)) {
+                selectedItems[elementId] = imageName;
+                currentElement.css("box-shadow", "0px 0px 5px 5px rgba(9,100,235,1)");
+            } else {
+                delete selectedItems[elementId];
+                currentElement.css("box-shadow", "0px 0px 5px -5px rgba(9,100,235,1)");
+            }
+        });
+
+        jQuery(".submit").on("click", function (e) {
+            e.preventDefault();
+            var countOfSelectedItems = Object.keys(selectedItems).length;
+            var matchCount = data[0].matchCount;
+            switch (true) {
+                case countOfSelectedItems == matchCount:
+                    clearInterval(levelTimer);
+                    document.getElementById('levelFinishTimeDisplay').innerHTML = " ";
+                    jQuery.ajax({
+                        method: "POST",
+                        url: "/makeStep",
+                        contentType: "application/json; charset=utf-8",
+                        cache: false,
+                        processData: false,
+                        data: JSON.stringify(selectedItems),
+                        success: function (resposeJsonObject) {
+                            var response = JSON.parse(resposeJsonObject);
+                            console.log(resposeJsonObject);
+                            if(response.active) {
+                                if (response.answer) {
+                                    alert("you goddamn right!");
+                                } else {
+                                    alert("sorry, but you missed");
+                                }
+                                jQuery(".submit").unbind("click");
+                                for (var member in selectedItems) delete selectedItems[member];
+                                getCards();
+                                jQuery(".player-score").text(response.score);
+                                jQuery(".player-level").text(response.level);
+                                jQuery(".player-lives").text(response.lives);
+                            } else {
+                                alert("it was your last live, game over");
+                                window.location.replace("/")
+                            }
+
+                        }
+                    });
+                    break;
+                case countOfSelectedItems < matchCount:
+                    alert("select more");
+                    break;
+                case countOfSelectedItems > matchCount:
+                    alert("to much, should be: " + matchCount);
+                    break;
+            }
+
+        });
+    }
+
+    function renderBase(isEmpty, data) {
+        var mainImageBlock = jQuery(".main-image");
+        jQuery(".playGround").find("div").remove();
+        mainImageBlock.find("img").remove();
+        for (i = 0; i < data.length; i++) {
+            if (isEmpty) {
+                jQuery(".playGround").append("<div class='card stub selectable item_" + i + "'id='item_" + i + "'><h1>?</h1></div>");
+                jQuery(".item_" + data[i].id).attr("name", data[i].name);
+
+            } else {
+                jQuery(".playGround").append("<div class='card item_" + i + "'id='item_" + i + "'></div>");
+                jQuery(".item_" + data[i].id).append("<img src=" + data[i].image + ">").attr("name", data[i].name);
+            }
+
+            if (data[i].isMain && !mainImageBlock.find("img").length) {
+                mainImageBlock.append("<img src=" + data[i].image + ">");
+            }
+        }
+    }
+
+    function showCards(data) {
+        renderBase(false, data);
+    }
+
+    function getCards() {
+        jQuery.ajax({
+            method: "GET",
+            url: "/getStartCards",
+            dataType: "html",
+            success: function (msg) {
+                var data = JSON.parse(msg);
+                renderBase(true, data);
+                runLevel(data);
+            }
+        })
+    }
+</script>
+</html>
