@@ -13,6 +13,7 @@ public class Player {
     private int score = 0;
     private int level = 1;
     private int lives = 3;
+    private int bestScore = 0;
 
 
     public boolean getStatus() {
@@ -21,11 +22,8 @@ public class Player {
 
     public Player getPlayerFromJSON(JsonObject playerFromDB) {
         Player player = context2.getBean(Player.class);
-        player.setName(playerFromDB.getString("name"));
-        player.setActive(playerFromDB.getBoolean("active"));
-        player.setScore(playerFromDB.getInt("score"));
-        player.setLevel(playerFromDB.getInt("level"));
-        player.setLives(playerFromDB.getInt("lives"));
+        DataBase dataBase = context2.getBean(DataBase.class);
+        dataBase.checkLives(playerFromDB);
         return player;
     }
 
