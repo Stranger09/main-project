@@ -42,7 +42,7 @@ public class Game {
         Player player = context2.getBean(Player.class);
         DataBase dataBase = context2.getBean(DataBase.class);
         dataBase.addPlayerToDB(player.getName(), player.getLevel(), player.getScore(),
-                player.getLives(), player.isActive(), player.getStatus());
+                player.getLives(), player.isActive(), player.getStatus(), player.getBestScore());
     }
 
 
@@ -72,6 +72,7 @@ public class Game {
         obj.put("level", player.getLevel());
         obj.put("lives", player.getLives());
         obj.put("active", player.getStatus());
+        obj.put("bestScore", player.getBestScore());
         obj.put("answer", stepResult.getCurrentStepResult());
         return obj.toString();
     }
@@ -81,12 +82,14 @@ public class Game {
         updatePlayerScore();
         updatePlayerLives();
         updatePlayerStatus();
+        updatePlayerBestScore();
 
         Player player = context2.getBean(Player.class);
         DataBase dataBase = context2.getBean(DataBase.class);
 
+
         dataBase.updatePlayerDataToDB(player.getName(), player.getLevel(), player.getScore(),
-                player.getLives(), player.isActive(), player.getStatus());
+                player.getLives(), player.isActive(), player.getStatus(), player.getBestScore());
 
         dataBase.getNextScoreFromDB(player.getScore());
 
@@ -123,6 +126,10 @@ public class Game {
 
     }
 
+    private void updatePlayerBestScore(){
+        DataBase dataBase = context2.getBean(DataBase.class);
+        dataBase.checkBestScore();
+    }
 
     // method nextMaxScore
 }

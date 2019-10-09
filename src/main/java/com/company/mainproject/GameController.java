@@ -36,6 +36,7 @@ public class GameController {
         model.put("level", player.getLevel());
         model.put("score", player.getScore());
         model.put("lives", player.getLives());
+        model.put("bestScore", player.getBestScore());
 
         return "game";
     }
